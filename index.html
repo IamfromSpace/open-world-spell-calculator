@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css" />
+	<link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap-theme.min.css" />
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+	<script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.2/js/bootstrap.min.js"></script>
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0/angular.min.js"></script>
+	<script src="src.js"></script>
+	<style>
+		/*.section-attacks {
+			background-color: #f2dede;
+			padding-bottom: 10px;
+			border-radius: 8px 0px 0px 0px;
+		}
+		.section-conditions {
+			background-color: #d9edf7;
+			padding-bottom: 10px;
+			border-radius: 0px 8px 0px 0px;
+		}
+		.section-rounds {
+			padding-top: 10px;
+			background-color: #dff0d8;
+			padding-bottom: 10px;
+			border-radius: 0px 0px 8px 8px;
+		}*/
+	</style>
+</head>
+<body>
+	<div ng-app="myapp" ng-controller="mycontroller" class="container">
+		<div class="jumbotron">
+			<h1>Open World Spell Damage Calculator</h1>
+			<p>Describe your ultimate spell to create your ultimate Open World spellbook</p>
+		</div>
+
+		<form class="form-horizontal">
+			<div class="form-group">
+				<label class="col-md-2 control-label">Roll To Hit:</label>
+				<div class="col-md-7">
+					<input type="text" class="form-control" ng-model="toHit" />
+				</div>
+				<div class="col-md-3">The bonus when casting this spell, which is applied to each attack roll</div>
+			</div>
+			<div class="form-group">
+				<label class="col-md-2 control-label">Channel Rounds:</label>
+				<div class="col-md-7"><input type="number" ng-model="channelRounds" class="form-control" /></div>
+				<div class="col-md-3">The number of rounds before making any attacks</div>
+			</div>
+			<div class="form-group">
+				<label class="col-md-2 control-label">Exhaust Rounds:</label>
+				<div class="col-md-7"><input type="number" ng-model="exhaustRounds" class="form-control" /></div>
+				<div class="col-md-3">The number of rounds your caster is exhausted after casting this</div>
+			</div>
+			<div class="row">
+				<div class="col-md-6 section-attacks">
+					<h2>Attacks</h2>
+					<p>You may have multiple attack rolls if you wish to attack multiple enemies. Every time you deal damage will be depedent upon succeeding exactly one of these rolls.</p>
+					<table class="table">
+						<th>Name</th>
+						<tr ng-repeat="attack in attacks">
+							<td><input type="text" ng-model="attack.name" /></td>
+							<td><div class="btn btn-danger" ng-click="attacks.splice(attacks.indexOf(attack), 1)">Delete</div></td>
+						</tr>
+					</table>
+					<div class="btn btn-primary" ng-click="attacks.push({name: 'Default'})">Add Attack Roll</div>
+				</div>
+				<div class="col-md-6 section-conditions">
+					<h2>Conditionals</h2>
+					<p>All damage can be conditionally based on events. Each event is based on a roll with a target by either the player or the enemy.</p>
+					<table class="table">
+						<th>Name</th>
+						<th>Difficulty</th>
+						<th>Enemy Rolls</th>
+						<tr ng-repeat="condition in conditions">
+							<td><input type="text" ng-model="condition.name" /></td>
+							<td><input type="number" ng-model="condition.difficulty" /></td>
+							<td><input type="checkbox" ng-model="condition.enemyRolls" /></td>
+							<td><div class="btn btn-danger" ng-click="deleteCondition(condition)">Delete</div></td>
+						</tr>
+					</table>
+					<div class="btn btn-primary" ng-click="conditions.push({name: 'Enemy dodges the aftershock', enemyRolls: true, difficulty: 2})">Add Condition</div>
+				</div>
+			</div>
+			<h1>Rounds</h1>
+			<p>After your channel time, you can deal either guaranteed damage, or damage based on a collection of the conditions you have created. This can be used to perform chaotic followup hits, empower a damaging component of the spell, or force an enemy to roll a save to avoid damage.</p>
+			<div class="row section-rounds">
+				<div ng-repeat="(roundnum, round) in rounds">
+					<h2><a ng-click="setOpenRound(round)">Round {{roundnum + channelRounds + 1}}</a></h2>
+					<div slide-toggle="openRound === round">
+						<div class="row">
+							<div class="col-md-9">
+								<table class="table">
+									<th> Damage</th>
+									<th> Conditions </th>
+									<tr ng-repeat="attack in round.attacks">
+										<td>
+											<input ng-model="attack.damage" type="decimal" style="width: 30px"/>
+										</td>
+										<td>
+											Attack: <select ng-model="attack.roll" ng-options="attack as attack.name for attack in attacks"></select>
+											<div ng-repeat="condition in attack.conditions">
+												<div class="input-group">
+													<span class="input-group-addon">
+														Difficulty
+													</span>
+													<input type="text" class="form-control" style="width:40px" ng-model="condition.difficulty"/>
+													<span class="input-group-addon">
+														Description
+													</span>
+													<input type="text" class="form-control" ng-model="condition.name"/>
+													<span class="input-group-addon">
+														Enemy
+														<input type="checkbox" ng-model="condition.enemyRolls"/>
+													</span>
+													<span class="input-group-btn" ng-click="attack.conditions.splice(attack.conditions.indexOf(condition), 1)">
+														<div class="btn btn-danger">X</div>
+													<span>
+													<br />
+												 </div>
+											 </div>
+											 <div ng-show="conditionsNotInAttack(attack, conditions).length">
+												Add condition
+												<select ng-change="attack.conditions.push(toBeAdded) && (toBeAdded = null)" ng-model="toBeAdded" ng-options="condition as condition.name for condition in conditionsNotInAttack(attack, conditions)">
+												</a>
+											</div>
+										</td>
+										<td><div class="btn btn-danger btn-large" ng-click="round.attacks.splice(round.attacks.indexOf(attack), 1)">Delete</div></td>
+								   </tr>
+								</table>
+							</div>
+							<div class="col-md-3">
+								<div class="alert alert-success">{{round | roundStr}}</div>
+								<div class="btn btn-danger btn-large" ng-click="rounds.splice(rounds.indexOf(round), 1);">Delete Round</div>
+							</div>
+						</div>
+						<div style="text-align: center">
+							<a class="btn btn-primary" ng-click="round.newAttack()">Add Attack</a>
+						</div>
+					</div>
+				</div>
+				<div class="col-md-12">
+					<a class="btn btn-large btn-primary" ng-click="newRound();">New Round</a>
+				</div>
+			</div>
+			<h1>Summary</h1>
+			<p>Power: {{getPower()}}</p>
+			<p>Overload: {{getOverload()}}</p>
+			<p>Description: {{this | spellStr}}</p>
+			<!--table class="table">
+				<th>Round</th>
+				<th>Description</th>
+				<tr ng-repeat="round in rounds">
+					<td>
+					{{round | roundStr}}
+				</tr>
+			</table-->
+		</form>
+	</div>
+</body>
+</html>
