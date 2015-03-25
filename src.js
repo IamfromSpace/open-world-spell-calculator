@@ -106,7 +106,66 @@ app.controller('mycontroller', ['$scope', 'powerService', function($scope, power
 	};
 
     $scope.getOverload = function() {
-        return 'not implemented yet';
+		var uniqueRolls = $scope.attacks.length + $scope.conditions.length;
+		if (uniqueRolls > 31) {
+        	return 'too many attacks and conditions';
+		}
+
+		var totalRounds = $scope.channelRounds + 1 + $scope.exhaustRounds;
+		var baseOddsToHit = getIdealRollOdds(BASE_TO_HIT_ROLL);
+		var minVariance = baseOddsToHit * Math.pow(BASE_DAMAGE_ON_HIT * (1 - baseOddsToHit),2);
+		
+		var attackCount = $scope.attacks.length;
+		
+		var largestIndex = (1 << (uniqueRolls + 1)) - 1;
+		
+		for (i=-5; i<=10; i++) {
+			var exD = expectedDamage(i);
+			var variance = 0;
+			for (j=0; j<=largestIndex; j++) {
+				var odds = 1;
+				for (k=0; k<attackCount; k++) {
+					if ((1 << k) == ((1 << k) & j)) {
+						odds *= getRealRollOdds(i);
+					} else {
+						odds *= (1 - getRealRollOdds(i));
+					}
+				}
+				for (k=0; k<$scope.conditions.length; k++) {
+					var mask = 1 << (k+attackCount);
+					flip = conditions[k].enemyRolls << (k+attackCount);
+					if (mask == (((mask & j) ^ flip))) {
+						odds *= getRealRollOdds(conditions[k].difficulty);
+					} else {
+						odds *= (1 - getRealRollOdds(conditions[k].difficulty));
+					}
+				}
+				
+				var indexDamage = 0
+				for (k=0; k < $scope.rounds.length) {
+					var roundDamage = 0;
+					var interest = Math.pow(INTEREST_RATE, k+$scope.channelRounds);
+					for (l=0; l<attackCount; l++) {
+						var hit == (1 << l) & j;
+						for each (condition in attack.conditions) {
+							var shift = $scope.conditions.indexOf(condition) + attackCount;
+							hit &= (i & (1 << shift)) == (1 << shift);
+							if (!hit) {break;}
+						}
+						if (hit) {
+							roundDamage += attack.damage;
+						}
+					indexDamage += roundDamage / interest;
+					}
+				}
+				variance += odds * Math.pow(indexDamage - exD,2);
+			}
+			if (variance > minVariance) {
+				return i;
+			}
+		}
+		
+		return 'Overload not Found';
     };
 
 	$scope.setOpenRound = function(v) {
